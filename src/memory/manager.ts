@@ -309,6 +309,7 @@ export class MemoryIndexManager implements MemorySearchManager {
       keyword: keywordResults,
       vectorWeight: hybrid.vectorWeight,
       textWeight: hybrid.textWeight,
+      query: cleaned,
     });
 
     return merged.filter((entry) => entry.score >= minScore).slice(0, maxResults);
@@ -363,7 +364,9 @@ export class MemoryIndexManager implements MemorySearchManager {
     keyword: Array<MemorySearchResult & { id: string; textScore: number }>;
     vectorWeight: number;
     textWeight: number;
+    query?: string;
   }): MemorySearchResult[] {
+    const enhanced = this.settings.query.hybrid;
     const merged = mergeHybridResults({
       vector: params.vector.map((r) => ({
         id: r.id,
@@ -385,6 +388,20 @@ export class MemoryIndexManager implements MemorySearchManager {
       })),
       vectorWeight: params.vectorWeight,
       textWeight: params.textWeight,
+      enhanced: {
+        query: params.query,
+        filepathWeight: (enhanced as any).filepathWeight ?? 0.25,
+        headerWeight: (enhanced as any).headerWeight ?? 0.1,
+        temporalBoost: (enhanced as any).temporalBoost ?? 3.0,
+        adaptive: {
+          enabled: (enhanced as any).adaptiveEnabled ?? true,
+          keywordThreshold: (enhanced as any).adaptiveKeywordThreshold ?? 0.1,
+          vectorWeight: 0.85,
+          textWeight: 0.05,
+          filepathWeight: 0.05,
+          headerWeight: 0.05,
+        },
+      },
     });
     return merged.map((entry) => entry as MemorySearchResult);
   }

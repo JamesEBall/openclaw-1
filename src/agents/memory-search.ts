@@ -62,6 +62,16 @@ export type ResolvedMemorySearchConfig = {
       vectorWeight: number;
       textWeight: number;
       candidateMultiplier: number;
+      /** Weight for filepath-based scoring (query terms in file path). */
+      filepathWeight: number;
+      /** Weight for header/section keyword scoring. */
+      headerWeight: number;
+      /** Multiplier for results matching date references in the query. */
+      temporalBoost: number;
+      /** Shift to vector-heavy weights when keyword overlap is very low. */
+      adaptiveEnabled: boolean;
+      /** Threshold below which adaptive weighting activates. */
+      adaptiveKeywordThreshold: number;
     };
   };
   cache: {
@@ -84,6 +94,11 @@ const DEFAULT_HYBRID_ENABLED = true;
 const DEFAULT_HYBRID_VECTOR_WEIGHT = 0.7;
 const DEFAULT_HYBRID_TEXT_WEIGHT = 0.3;
 const DEFAULT_HYBRID_CANDIDATE_MULTIPLIER = 4;
+const DEFAULT_HYBRID_FILEPATH_WEIGHT = 0.25;
+const DEFAULT_HYBRID_HEADER_WEIGHT = 0.1;
+const DEFAULT_HYBRID_TEMPORAL_BOOST = 3.0;
+const DEFAULT_HYBRID_ADAPTIVE_ENABLED = true;
+const DEFAULT_HYBRID_ADAPTIVE_KW_THRESHOLD = 0.1;
 const DEFAULT_CACHE_ENABLED = true;
 const DEFAULT_SOURCES: Array<"memory" | "sessions"> = ["memory"];
 
@@ -236,6 +251,26 @@ function mergeConfig(
       overrides?.query?.hybrid?.candidateMultiplier ??
       defaults?.query?.hybrid?.candidateMultiplier ??
       DEFAULT_HYBRID_CANDIDATE_MULTIPLIER,
+    filepathWeight:
+      (overrides?.query?.hybrid as any)?.filepathWeight ??
+      (defaults?.query?.hybrid as any)?.filepathWeight ??
+      DEFAULT_HYBRID_FILEPATH_WEIGHT,
+    headerWeight:
+      (overrides?.query?.hybrid as any)?.headerWeight ??
+      (defaults?.query?.hybrid as any)?.headerWeight ??
+      DEFAULT_HYBRID_HEADER_WEIGHT,
+    temporalBoost:
+      (overrides?.query?.hybrid as any)?.temporalBoost ??
+      (defaults?.query?.hybrid as any)?.temporalBoost ??
+      DEFAULT_HYBRID_TEMPORAL_BOOST,
+    adaptiveEnabled:
+      (overrides?.query?.hybrid as any)?.adaptiveEnabled ??
+      (defaults?.query?.hybrid as any)?.adaptiveEnabled ??
+      DEFAULT_HYBRID_ADAPTIVE_ENABLED,
+    adaptiveKeywordThreshold:
+      (overrides?.query?.hybrid as any)?.adaptiveKeywordThreshold ??
+      (defaults?.query?.hybrid as any)?.adaptiveKeywordThreshold ??
+      DEFAULT_HYBRID_ADAPTIVE_KW_THRESHOLD,
   };
   const cache = {
     enabled: overrides?.cache?.enabled ?? defaults?.cache?.enabled ?? DEFAULT_CACHE_ENABLED,
@@ -281,6 +316,11 @@ function mergeConfig(
         vectorWeight: normalizedVectorWeight,
         textWeight: normalizedTextWeight,
         candidateMultiplier,
+        filepathWeight: clampNumber(hybrid.filepathWeight, 0, 1),
+        headerWeight: clampNumber(hybrid.headerWeight, 0, 1),
+        temporalBoost: clampNumber(hybrid.temporalBoost, 1, 10),
+        adaptiveEnabled: Boolean(hybrid.adaptiveEnabled),
+        adaptiveKeywordThreshold: clampNumber(hybrid.adaptiveKeywordThreshold, 0, 1),
       },
     },
     cache: {
